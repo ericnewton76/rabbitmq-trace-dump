@@ -8,9 +8,9 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyTitle("rabbitmq-trace-dump")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("CST")]
+[assembly: AssemblyCompany("CentralSquare Technologies")]
 [assembly: AssemblyProduct("rabbitmq-trace-dump")]
-[assembly: AssemblyCopyright("Copyright © CST 2024")]
+[assembly: AssemblyCopyright("Copyright © CentralSquare Technologies 2024")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
