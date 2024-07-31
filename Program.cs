@@ -137,7 +137,7 @@ namespace rabbitmq_trace_dump
                             if (options.Interactive)
                             {
                                 output.WriteLine("/{0}={1}", options.SearchKey, options.SearchValue);
-                                if(skipCount > -1) output.WriteLine("skipped: {0} -----------------------------------------------", skipCount);
+                                if (skipCount > -1) output.WriteLine("skipped: {0} -----------------------------------------------", skipCount);
                                 //output.WriteLine(jobject);
                             }
 
@@ -146,6 +146,8 @@ namespace rabbitmq_trace_dump
                         }
 
                         JToken payload = jobject["payload"];
+                        BsonDocument doc = null;
+
                         if (payload != null && payload.Type == JTokenType.String)
                         {
                             string payloadValue = payload.Value<string>();
@@ -157,9 +159,9 @@ namespace rabbitmq_trace_dump
                                 {
                                     byte[] bytes = Convert.FromBase64String(payloadValue);
 
-                                    BsonDocument doc = BsonSerializer.Deserialize<BsonDocument>(bytes);
+                                    doc = BsonSerializer.Deserialize<BsonDocument>(bytes);
 
-                                    jobject["payload"] = JToken.Parse(doc.ToJson(payloadWriterSettings));
+                                    jobject["payload"] = "[[bsonDocument.ToString()]]";
 
                                     //output.WriteLine("payload tostring:");
                                     //output.WriteLine(doc.ToJson(new MongoDB.Bson.IO.JsonWriterSettings() {  Indent=true }));
@@ -172,7 +174,17 @@ namespace rabbitmq_trace_dump
                             }
                         }
 
-                        output.WriteLine(jobject.ToString(options.Pretty ? Formatting.Indented : Formatting.None));
+                        if (doc != null)
+                        {
+                            output.WriteLine(
+                                jobject.ToString(options.Pretty ? Formatting.Indented : Formatting.None)
+                                    .Replace("\"[[bsonDocument.ToString()]]\"", doc.ToJson(new JsonWriterSettings() {  Indent=true }).Replace("\n\t", "\n\t\t"))
+                            );
+                        }
+                        else
+                        {
+                            output.WriteLine(jobject.ToString(options.Pretty ? Formatting.Indented : Formatting.None));
+                        }
                     }
 
                 user_interactive:
