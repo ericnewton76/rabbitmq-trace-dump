@@ -50,7 +50,7 @@ namespace rabbitmq_trace_dump
 
         private long _Find(string x, bool direction)
         {
-            int lookFor = (int)x[0];
+            byte lookFor = (byte)x[0];
 
             if(direction == false && s.Position > 0) s.Seek(-2, SeekOrigin.Current);
 
@@ -62,12 +62,20 @@ namespace rabbitmq_trace_dump
                 if (s.Position == s.Length) s.Seek(-1, SeekOrigin.Current);
                 int b = s.ReadByte();
 
-                if (b == (int)lookFor) break;
+                if (b == lookFor) break;
 
                 s.Seek(-2, SeekOrigin.Current);
             }
             return s.Position;
         }
+
+        public long SeekMark()
+        {
+            s.Position = _seekPositionMark;
+            return s.Position;
+        }
+
+        List<byte> _bytes = new List<byte>(1000);
 
         // This method assumes lines end with a line feed.
         // You may need to modify this method if your stream
@@ -75,14 +83,20 @@ namespace rabbitmq_trace_dump
         // convention that isn't just \n
         public override string ReadLine()
         {
-            List<byte> bytes = new List<byte>();
+            _seekPositionMark = s.Position;
+            _bytes.Clear();
+
             int current;
             while ((current = Read()) != -1 && current != (int)'\n')
             {
                 byte b = (byte)current;
-                bytes.Add(b);
+                _bytes.Add(b);
             }
-            return Encoding.ASCII.GetString(bytes.ToArray());
+
+            if (_bytes.Count == 0)
+                return null;
+            else
+                return Encoding.ASCII.GetString(_bytes.ToArray());
         }
 
         // Read works differently than the `Read()` method of a 

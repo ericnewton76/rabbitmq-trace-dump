@@ -33,9 +33,9 @@ namespace rabbitmq_trace_dump
         {
             if (string.IsNullOrEmpty(options.InputFile)) { Console.WriteLine("No inputfile specified."); return false; }// options.InputFile = "C:/var/tmp/rabbitmq-tracing/test trace.log";
             if (File.Exists(options.InputFile) == false) { Console.WriteLine("Input file '{0}' wasnt found.", options.InputFile); return false; }
-            
+
             if (options.Search != null) { ParseSearch(options, options.Search); return true; }
-            
+
             return true;
         }
 
@@ -77,6 +77,10 @@ namespace rabbitmq_trace_dump
             }
         }
 
+        private static List<(int recordIndex, long position)> _recordPositions = new List<(int, long)>(1000);
+        private static int _currentRecordIndex = -1;
+        private static bool _seeking = false;
+
         private static void REadFileREAD(ProgramOptions options, string tracelogPath, TextWriter output)
         {
             JsonWriterSettings payloadWriterSettings = new JsonWriterSettings() { Indent = (options.Pretty || options.Interactive) };
@@ -92,11 +96,14 @@ namespace rabbitmq_trace_dump
                 var sr = new UnbufferedStreamReader(fs);
 
                 long _lastPosition = 0;
+                long _maxPosition = 0;
 
                 //while (jsonreader.Read())
                 while (true)
                 {
-                    if (sr.EndOfStream)
+                    string currentLine = sr.ReadLine();
+
+                    if (sr.EndOfStream || currentLine == null)
                     {
                         if (options.Interactive)
                         {
@@ -106,13 +113,22 @@ namespace rabbitmq_trace_dump
                         else break;
                     }
 
+                    _maxPosition = Math.Max(_maxPosition, fs.Position);
                     _lastPosition = fs.Position;
-                    if (options.Interactive) Console.WriteLine("Position={0}", fs.Position);
 
-                    string currentLine = sr.ReadLine();
+                    //only mark record positions when moving forward
+                    if (fs.Position >= _maxPosition)
+                    {
+                        _currentRecordIndex++;
+                        _recordPositions.Add((_currentRecordIndex, fs.Position));
+                    }
+
+                    
+                    if (options.Interactive) Console.WriteLine("RecordIndex={0} Position={1}", _currentRecordIndex, fs.Position);
+
 
                     //if skipping is active, then keep skipping
-                    if(_skipCountTarget > 0) { _skipCountTarget--; continue; }
+                    if (_skipCountTarget > 0) { _skipCountTarget--; continue; }
 
                     //if (jsonreader.TokenType == JsonToken.StartObject)
                     {
@@ -214,12 +230,15 @@ namespace rabbitmq_trace_dump
                                 case ConsoleKey.UpArrow:
                                     Console.Clear();
                                     fs.Position = _lastPosition;
-                                    sr.FindBack("\n");
+                                    //sr.FindBack("\n");
+                                    sr.SeekMark();
+                                    _seeking = true;
                                     break;
 
                                 case ConsoleKey.Spacebar:
                                 case ConsoleKey.DownArrow:
                                     Console.Clear();
+                                    _seeking = false;
                                     continue;
 
                                 case ConsoleKey.S:
