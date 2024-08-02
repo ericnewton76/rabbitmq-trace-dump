@@ -259,6 +259,11 @@ namespace rabbitmq_trace_dump
 
             }
 
+            if (options.HiddenProperties != null)
+            {
+                foreach (var prop in options.HiddenProperties) jobject.Remove(prop);
+            }
+
             JToken payload = jobject["payload"];
             BsonDocument doc = null;
 
