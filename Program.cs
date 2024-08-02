@@ -78,7 +78,7 @@ namespace rabbitmq_trace_dump
         }
 
         private static List<(int recordIndex, long position)> _recordPositions = new List<(int, long)>(1000);
-        private static int _currentRecordIndex = -1;
+        private static int _currentRecordIndex;
         private static bool _seeking = false;
 
         private static void REadFileREAD(ProgramOptions options, string tracelogPath, TextWriter output)
@@ -97,10 +97,14 @@ namespace rabbitmq_trace_dump
 
                 long _lastPosition = 0;
                 long _maxPosition = 0;
-
+                long _recordPosition = 0;
+                /*int*/ _currentRecordIndex = -1;
+                
                 //while (jsonreader.Read())
                 while (true)
                 {
+                    _currentRecordIndex++;
+                    _recordPosition = fs.Position;
                     string currentLine = sr.ReadLine();
 
                     if (sr.EndOfStream || currentLine == null)
@@ -113,95 +117,27 @@ namespace rabbitmq_trace_dump
                         else break;
                     }
 
-                    _maxPosition = Math.Max(_maxPosition, fs.Position);
                     _lastPosition = fs.Position;
 
                     //only mark record positions when moving forward
-                    if (fs.Position >= _maxPosition)
+                    if (fs.Position > _maxPosition)
                     {
-                        _currentRecordIndex++;
-                        _recordPositions.Add((_currentRecordIndex, fs.Position));
+                        _recordPositions.Add((_currentRecordIndex, _recordPosition));
+                        _maxPosition = fs.Position;
                     }
 
-                    
-                    if (options.Interactive) Console.WriteLine("RecordIndex={0} Position={1}", _currentRecordIndex, fs.Position);
-
+                    if (options.Interactive)
+                    {
+                        //display top banner when in interactive mode
+                        Console.WriteLine("RecordIndex={0} Position={1}", _currentRecordIndex, _recordPosition);
+                    }
 
                     //if skipping is active, then keep skipping
                     if (_skipCountTarget > 0) { _skipCountTarget--; continue; }
 
-                    //if (jsonreader.TokenType == JsonToken.StartObject)
-                    {
-                        var jobject = JToken.Parse(currentLine) as JObject;
-
-                        if (options.SearchKey != null)
-                        {
-
-                            try
-                            {
-                                JToken token = jobject[options.SearchKey];
-                                if (token == null) { skipCount++; continue; }
-
-                                string val = token.Value<string>();
-                                if (string.Compare(val, options.SearchValue, true) != 0) { skipCount++; continue; }
-                            }
-                            catch (Exception ex)
-                            {
-                                string ex2 = ex.ToString();
-                            }
-
-                            if (options.Interactive)
-                            {
-                                output.WriteLine("/{0}={1}", options.SearchKey, options.SearchValue);
-                                if (skipCount > -1) output.WriteLine("skipped: {0} -----------------------------------------------", skipCount);
-                                //output.WriteLine(jobject);
-                            }
-
-                            skipCount = 0;
-
-                        }
-
-                        JToken payload = jobject["payload"];
-                        BsonDocument doc = null;
-
-                        if (payload != null && payload.Type == JTokenType.String)
-                        {
-                            string payloadValue = payload.Value<string>();
-
-                            if (string.IsNullOrEmpty(payloadValue) == false)
-                            {
-                                try
-
-                                {
-                                    byte[] bytes = Convert.FromBase64String(payloadValue);
-
-                                    doc = BsonSerializer.Deserialize<BsonDocument>(bytes);
-
-                                    jobject["payload"] = "[[bsonDocument.ToString()]]";
-
-                                    //output.WriteLine("payload tostring:");
-                                    //output.WriteLine(doc.ToJson(new MongoDB.Bson.IO.JsonWriterSettings() {  Indent=true }));
-
-                                }
-                                catch (FormatException f_ex)
-                                {
-                                    if (Console.IsOutputRedirected) Console.Error.WriteLine(f_ex.Message);
-                                }
-                            }
-                        }
-
-                        if (doc != null)
-                        {
-                            output.WriteLine(
-                                jobject.ToString(options.Pretty ? Formatting.Indented : Formatting.None)
-                                    .Replace("\"[[bsonDocument.ToString()]]\"", doc.ToJson(new JsonWriterSettings() {  Indent=true }).Replace("\n\t", "\n\t\t"))
-                            );
-                        }
-                        else
-                        {
-                            output.WriteLine(jobject.ToString(options.Pretty ? Formatting.Indented : Formatting.None));
-                        }
-                    }
+                    //write current rabbitmq record as json and decode the payload into a BsonDocument
+                    if (DisplayRecord(currentLine, options, output, ref skipCount) == false) 
+                        continue; //skipping due to active search
 
                 user_interactive:
                     if (options.Interactive)
@@ -229,9 +165,20 @@ namespace rabbitmq_trace_dump
 
                                 case ConsoleKey.UpArrow:
                                     Console.Clear();
-                                    fs.Position = _lastPosition;
+
+                                    _currentRecordIndex--; 
+                                    if (_currentRecordIndex < 0) _currentRecordIndex = 0;
+
+                                    if (_currentRecordIndex > -1)
+                                        fs.Position = _recordPositions[_currentRecordIndex].position;
+                                    else
+                                        fs.Position = 0;
+
+                                    //subtract again because its incremented on first line of while(true)
+                                    _currentRecordIndex--;
+
                                     //sr.FindBack("\n");
-                                    sr.SeekMark();
+                                    //sr.SeekMark();
                                     _seeking = true;
                                     break;
 
@@ -279,6 +226,81 @@ namespace rabbitmq_trace_dump
 
 
             }
+        }
+
+        private static bool DisplayRecord(string currentLine, ProgramOptions options, TextWriter output, ref int skipCount)
+        {
+            var jobject = JToken.Parse(currentLine) as JObject;
+
+            if (options.SearchKey != null)
+            {
+
+                try
+                {
+                    JToken token = jobject[options.SearchKey];
+                    if (token == null) { skipCount++; return false; }
+
+                    string val = token.Value<string>();
+                    if (string.Compare(val, options.SearchValue, true) != 0) { skipCount++; return false; }
+                }
+                catch (Exception ex)
+                {
+                    string ex2 = ex.ToString();
+                }
+
+                if (options.Interactive)
+                {
+                    output.WriteLine("/{0}={1}", options.SearchKey, options.SearchValue);
+                    if (skipCount > -1) output.WriteLine("skipped: {0} -----------------------------------------------", skipCount);
+                    //output.WriteLine(jobject);
+                }
+
+                skipCount = 0;
+
+            }
+
+            JToken payload = jobject["payload"];
+            BsonDocument doc = null;
+
+            if (payload != null && payload.Type == JTokenType.String)
+            {
+                string payloadValue = payload.Value<string>();
+
+                if (string.IsNullOrEmpty(payloadValue) == false)
+                {
+                    try
+
+                    {
+                        byte[] bytes = Convert.FromBase64String(payloadValue);
+
+                        doc = BsonSerializer.Deserialize<BsonDocument>(bytes);
+
+                        jobject["payload"] = "[[bsonDocument.ToString()]]";
+
+                        //output.WriteLine("payload tostring:");
+                        //output.WriteLine(doc.ToJson(new MongoDB.Bson.IO.JsonWriterSettings() {  Indent=true }));
+
+                    }
+                    catch (FormatException f_ex)
+                    {
+                        if (Console.IsOutputRedirected) Console.Error.WriteLine(f_ex.Message);
+                    }
+                }
+            }
+
+            if (doc != null)
+            {
+                output.WriteLine(
+                    jobject.ToString(options.Pretty ? Formatting.Indented : Formatting.None)
+                        .Replace("\"[[bsonDocument.ToString()]]\"", doc.ToJson(new JsonWriterSettings() { Indent = true }).Replace("\n\t", "\n\t\t"))
+                );
+            }
+            else
+            {
+                output.WriteLine(jobject.ToString(options.Pretty ? Formatting.Indented : Formatting.None));
+            }
+
+            return true;
         }
 
         private static void SeekUntil(Stream s, int direction, char lookFor)

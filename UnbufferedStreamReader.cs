@@ -14,7 +14,7 @@ namespace rabbitmq_trace_dump
     // comes from https://stackoverflow.com/a/2496729/323456
     public class UnbufferedStreamReader : TextReader
     {
-        Stream s;
+        Stream _baseStream;
         long _seekPositionMark;
 
         public bool EndOfStream
@@ -24,25 +24,20 @@ namespace rabbitmq_trace_dump
 
         public UnbufferedStreamReader(string path)
         {
-            s = new FileStream(path, FileMode.Open);
+            _baseStream = new FileStream(path, FileMode.Open);
         }
 
         public UnbufferedStreamReader(Stream stream)
         {
             if (stream.CanSeek == false) throw new ArgumentException("Stream is not seekable.");
-            s = stream;
+            _baseStream = stream;
         }
 
         public long Seek(long offset, SeekOrigin seekOrigin)
         {
-            return s.Seek(offset, seekOrigin);
+            return _baseStream.Seek(offset, seekOrigin);
         }
 
-        public long Mark()
-        {
-            _seekPositionMark = s.Position;
-            return _seekPositionMark;
-        }
         public long FindBack(string x)
         {
             return _Find(x, false);
@@ -52,27 +47,21 @@ namespace rabbitmq_trace_dump
         {
             byte lookFor = (byte)x[0];
 
-            if(direction == false && s.Position > 0) s.Seek(-2, SeekOrigin.Current);
+            if(direction == false && _baseStream.Position > 0) _baseStream.Seek(-2, SeekOrigin.Current);
 
             while (true)
             {
-                if (direction == false && s.Position == 0) return 0;
-                if (direction == true && s.Position == s.Length) return s.Position;
+                if (direction == false && _baseStream.Position == 0) return 0;
+                if (direction == true && _baseStream.Position == _baseStream.Length) return _baseStream.Position;
 
-                if (s.Position == s.Length) s.Seek(-1, SeekOrigin.Current);
-                int b = s.ReadByte();
+                if (_baseStream.Position == _baseStream.Length) _baseStream.Seek(-1, SeekOrigin.Current);
+                int b = _baseStream.ReadByte();
 
                 if (b == lookFor) break;
 
-                s.Seek(-2, SeekOrigin.Current);
+                _baseStream.Seek(-2, SeekOrigin.Current);
             }
-            return s.Position;
-        }
-
-        public long SeekMark()
-        {
-            s.Position = _seekPositionMark;
-            return s.Position;
+            return _baseStream.Position;
         }
 
         List<byte> _bytes = new List<byte>(1000);
@@ -83,7 +72,7 @@ namespace rabbitmq_trace_dump
         // convention that isn't just \n
         public override string ReadLine()
         {
-            _seekPositionMark = s.Position;
+            _seekPositionMark = _baseStream.Position;
             _bytes.Clear();
 
             int current;
@@ -103,16 +92,7 @@ namespace rabbitmq_trace_dump
         // TextReader. It reads the next BYTE rather than the next character
         public override int Read()
         {
-            return s.ReadByte();
-        }
-
-        public override void Close()
-        {
-            s.Close();
-        }
-        protected override void Dispose(bool disposing)
-        {
-            s.Dispose();
+            return _baseStream.ReadByte();
         }
 
         public override int Peek()
@@ -157,5 +137,39 @@ namespace rabbitmq_trace_dump
         {
             throw new NotImplementedException();
         }
+
+        #region Close / Dispose
+        public override void Close()
+        {
+            _baseStream.Close();
+        }
+        protected override void Dispose(bool disposing)
+        {
+            _baseStream.Dispose();
+        }
+        #endregion
+
+        #region Mark / SeekMark
+        /// <summary>
+        /// Mark a position in the basestream
+        /// </summary>
+        /// <returns></returns>
+        public long Mark()
+        {
+            _seekPositionMark = _baseStream.Position;
+            return _seekPositionMark;
+        }
+
+        /// <summary>
+        /// Seek to the marked position
+        /// </summary>
+        /// <returns></returns>
+        public long SeekMark()
+        {
+            _baseStream.Position = _seekPositionMark;
+            return _baseStream.Position;
+        }
+#endregion
+
     }
 }
