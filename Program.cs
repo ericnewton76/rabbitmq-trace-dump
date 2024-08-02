@@ -191,7 +191,7 @@ namespace rabbitmq_trace_dump
                                 case ConsoleKey.S:
                                     Console.Write("skip count: ");
                                     string skipcount = Console.ReadLine();
-                                    _skipCountTarget = int.Parse(skipcount);
+                                    if (int.TryParse(skipcount, out _skipCountTarget) == true) { }
                                     break;
 
                                 case ConsoleKey.Escape:
@@ -293,17 +293,21 @@ namespace rabbitmq_trace_dump
                 }
             }
 
+            StringBuilder sb = new StringBuilder();
+            sb.Clear();
+            sb.Append(jobject.ToString(options.Pretty ? Formatting.Indented : Formatting.None));
+
             if (doc != null)
             {
-                output.WriteLine(
-                    jobject.ToString(options.Pretty ? Formatting.Indented : Formatting.None)
-                        .Replace("\"[[bsonDocument.ToString()]]\"", doc.ToJson(new JsonWriterSettings() { Indent = true }).Replace("\n\t", "\n\t\t"))
-                );
+                var payloadJsonStr = doc.ToJson(new JsonWriterSettings() { Indent = true });
+                
+                //replace two spaces with four spaces at beginning of lines, basically increases indent
+                payloadJsonStr = payloadJsonStr.Replace("\n  ", "\n    "); 
+                
+                sb.Replace("\"[[bsonDocument.ToString()]]\"", payloadJsonStr);
             }
-            else
-            {
-                output.WriteLine(jobject.ToString(options.Pretty ? Formatting.Indented : Formatting.None));
-            }
+
+            output.WriteLine(sb.ToString());
 
             return true;
         }
