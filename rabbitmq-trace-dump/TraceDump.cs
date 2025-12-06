@@ -3,6 +3,8 @@ using MongoDB.Bson.IO;
 using MongoDB.Bson.Serialization;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Spectre.Console;
+using Spectre.Console.Json;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -216,15 +218,23 @@ namespace rabbitmq_trace_dump
                 foreach (var prop in ProgramOptions.HiddenProperties) jobject.Remove(prop);
             }
 
-            StringBuilder sb = DecodePayload(jobject);
+            var new_jobject = DecodePayload(jobject);
+            string new_jobject_json = Newtonsoft.Json.JsonConvert.SerializeObject(new_jobject, ProgramOptions.Pretty ? Formatting.Indented : Formatting.None);
 
-            output.WriteLine(sb.ToString());
+            AnsiConsole.Write(new JsonText(new_jobject_json)
+                .BracesColor(Color.Gray)
+                .BracketColor(Color.Gray)
+                .StringColor(Color.Yellow)
+                .NumberColor(Color.Yellow)
+                .BooleanColor(Color.Yellow)
+                .NullColor(Color.Yellow)
+            );
+
         }
 
-        private StringBuilder DecodePayload(JObject jobject)
+        private JObject DecodePayload(JObject jobject)
         {
             JToken payload = jobject["payload"];
-            BsonDocument doc = null;
 
             if (payload != null && payload.Type == JTokenType.String)
             {
@@ -241,12 +251,17 @@ namespace rabbitmq_trace_dump
 
                     try
                     {
-                        doc = BsonSerializer.Deserialize<BsonDocument>(bytes);
+                        var doc = BsonSerializer.Deserialize<BsonDocument>(bytes);
 
-                        jobject["payload"] = "[[bsonDocument.ToString()]]";
+                        // Use RelaxedExtendedJson to output standard JSON-compatible format
+                        var jsonWriterSettings = new JsonWriterSettings
+                        {
+                            Indent = false,
+                            OutputMode = JsonOutputMode.RelaxedExtendedJson
+                        };
+                        var jsonString = doc.ToJson(jsonWriterSettings);
+                        jobject["payload"] = JObject.Parse(jsonString);
 
-                        //output.WriteLine("payload tostring:");
-                        //output.WriteLine(doc.ToJson(new MongoDB.Bson.IO.JsonWriterSettings() {  Indent=true }));
                         bytes = null;
                     }
                     catch (FormatException f_ex)
@@ -263,26 +278,10 @@ namespace rabbitmq_trace_dump
                         }
                         catch { }
                     }
-
                 }
             }
 
-            StringBuilder sb = new StringBuilder();
-            sb.Clear();
-            sb.Append(jobject.ToString(ProgramOptions.Pretty ? Formatting.Indented : Formatting.None));
-
-            if (doc != null)
-            {
-                var payloadJsonStr = doc.ToJson(new JsonWriterSettings() { Indent = true });
-
-                //replace two spaces with four spaces at beginning of lines, basically increases indent
-                payloadJsonStr = payloadJsonStr.Replace("\n  ", "\n    ");
-
-                //include the quotes
-                sb.Replace("\"[[bsonDocument.ToString()]]\"", payloadJsonStr);
-            }
-
-            return sb;
+            return jobject;
         }
 
         private static void SeekUntil(Stream s, int direction, char lookFor)
