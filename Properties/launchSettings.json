@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "rabbitmq-trace-dump": {
+      "commandName": "Project",
+      "commandLineArgs": "-ip c:/var/tmp/rabbitmq-tracing/trace1.log --hide connection,channel,node,user,type,vhost"
+    },
+    "Profile 1": {
+      "commandName": "Project",
+      "commandLineArgs": "c:/var/tmp/rabbitmq-tracing/test-json.log -ip"
+    }
+  }
+}
