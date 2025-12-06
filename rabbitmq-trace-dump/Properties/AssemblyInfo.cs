@@ -11,3 +11,5 @@ using System.Runtime.InteropServices;
 
 // The following GUID is for the ID of the typelib if this project is exposed to COM
 [assembly: Guid("57a9f01d-2bb3-424a-8c89-647db65eb0d5")]
+
+[assembly: InternalsVisibleTo("rabbitmqTraceDump_Tests")]
