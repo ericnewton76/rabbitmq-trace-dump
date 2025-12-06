@@ -64,6 +64,10 @@ When running with `-i`, use these keyboard shortcuts:
 | `==` | Equals (case-insensitive) |
 | `~==` | Pattern match |
 
+** Example **
+Filter where exchange equals "my-exchange"
+`rabbitmq-trace-dump --search "exchange=my-exchange" trace.log`
+
 ## Payload Decoding
 
 The tool automatically detects and decodes payloads in the following formats:
