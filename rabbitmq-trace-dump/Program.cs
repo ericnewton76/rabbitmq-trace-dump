@@ -4,6 +4,7 @@ using MongoDB.Bson.IO;
 using MongoDB.Bson.Serialization;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Spectre.Console;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -25,15 +26,45 @@ namespace rabbitmq_trace_dump
             {
                 if (ValidateOptions(options) == false) return;
 
+                if (options.Interactive && string.IsNullOrEmpty(options.InputFile))
+                {
+                    SelectFile(options);
+                    if (string.IsNullOrEmpty(options.InputFile)) return;
+                }
+
                 var traceDump = new TraceDump(options);
                 traceDump.REadFileREAD(options.InputFile, Console.Out);
             }
         }
 
+        private static void SelectFile(ProgramOptions options)
+        {
+            var directory = "C:/var/tmp/rabbitmq-tracing"; //default directory that rabbitmq on windows writes trace files to
+
+            //list files and output a prompt using Spectre.Console
+            var selectedFile = AnsiConsole.Prompt(new SelectionPrompt<string>()
+                .Title("Select a trace file to open:")
+                .PageSize(10)
+                .AddChoices(Directory.GetFiles(directory, "*.log")));
+
+            if (string.IsNullOrEmpty(selectedFile) == false) options.InputFile = selectedFile;
+        }   
+
         private static bool ValidateOptions(ProgramOptions options)
         {
-            if (string.IsNullOrEmpty(options.InputFile)) { Console.WriteLine("No inputfile specified."); return false; }// options.InputFile = "C:/var/tmp/rabbitmq-tracing/test trace.log";
-            if (File.Exists(options.InputFile) == false) { Console.WriteLine("Input file '{0}' wasnt found.", options.InputFile); return false; }
+            
+            if (options == null) return false;
+
+            // Validate input file, make sure it exists, check if console input is redirected
+            if (string.IsNullOrEmpty(options.InputFile) == false)
+            {
+
+                if (File.Exists(options.InputFile) == false)
+                {
+                    Console.WriteLine("Input file '{0}' wasnt found.", options.InputFile);
+                    return false;
+                }
+            }
 
             if (options.Search != null) { ParseSearch(options, options.Search); return true; }
 
