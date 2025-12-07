@@ -32,8 +32,15 @@ namespace rabbitmq_trace_dump
                     if (string.IsNullOrEmpty(options.InputFile)) return;
                 }
 
-                var traceDump = new TraceDump(options);
-                traceDump.REadFileREAD(options.InputFile, Console.Out);
+                try
+                {
+                    var traceDump = new TraceDump(options);
+                    traceDump.REadFileREAD(options.InputFile, Console.Out);
+                }
+                catch(Exception ex)
+                {
+                    AnsiConsole.WriteException(ex);
+                }
             }
         }
 
