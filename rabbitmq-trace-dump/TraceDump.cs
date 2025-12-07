@@ -190,6 +190,7 @@ namespace rabbitmq_trace_dump
                                     break;
 
                                 case ConsoleKey.Escape:
+                                case ConsoleKey.Q:
                                     Environment.Exit(0);
                                     break;
 
