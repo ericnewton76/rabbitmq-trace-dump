@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace rabbitmq_trace_dump
@@ -241,7 +242,7 @@ namespace rabbitmq_trace_dump
                 if (token == null) { return false; }
 
                 string val = token.Value<string>();
-                if (string.Compare(val, ProgramOptions.SearchValue, true) != 0) { return false; }
+                if (TryCompare(val, ProgramOptions.SearchValue, ProgramOptions.SearchOp) != 0) { return false; }
             }
             catch (Exception ex)
             {
@@ -249,6 +250,51 @@ namespace rabbitmq_trace_dump
             }
 
             return true;
+        }
+
+        /// <summary>
+        /// Compares two string values based on the specified comparison operation.
+        /// </summary>
+        /// <param name="actual">The actual value from the record.</param>
+        /// <param name="expected">The expected value to compare against.</param>
+        /// <param name="searchOp">The comparison operation to perform.</param>
+        /// <returns>0 if match, non-zero if no match.</returns>
+        private int TryCompare(string actual, string expected, SearchOperator searchOp)
+        {
+            if (actual == null && expected == null) return 0;
+            if (actual == null || expected == null) return -1;
+
+            switch (searchOp)
+            {
+                case SearchOperator.Equals:
+                    return string.Compare(actual, expected, StringComparison.OrdinalIgnoreCase);
+
+                case SearchOperator.Contains:
+                    return actual.Contains(expected, StringComparison.OrdinalIgnoreCase) ? 0 : -1;
+
+                case SearchOperator.NotEquals:
+                    return string.Compare(actual, expected, StringComparison.OrdinalIgnoreCase) != 0 ? 0 : -1;
+
+                case SearchOperator.StartsWith:
+                    return actual.StartsWith(expected, StringComparison.OrdinalIgnoreCase) ? 0 : -1;
+
+                case SearchOperator.EndsWith:
+                    return actual.EndsWith(expected, StringComparison.OrdinalIgnoreCase) ? 0 : -1;
+
+                case SearchOperator.Regex:
+                    try
+                    {
+                        var regex = new Regex(expected, RegexOptions.IgnoreCase);
+                        return regex.IsMatch(actual) ? 0 : -1;
+                    }
+                    catch
+                    {
+                        return -1;
+                    }
+
+                default:
+                    return string.Compare(actual, expected, StringComparison.OrdinalIgnoreCase);
+            }
         }
 
         private void DisplayRecord(bool payloadDecoded, JObject jobject, TextWriter output)

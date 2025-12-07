@@ -75,37 +75,85 @@ namespace rabbitmq_trace_dump
         {
             if (string.IsNullOrEmpty(searchValue))
             {
-                options.SearchOp = 0;
+                options.SearchOp = SearchOperator.None;
                 options.SearchKey = null;
                 options.SearchValue = null;
                 return;
             }
 
-            int search_operator_index, search_operator_length, search_op;
-            DetermineSearchOp(searchValue, out search_operator_index, out search_operator_length, out search_op);
+            DetermineSearchOp(searchValue, out int search_operator_index, out int search_operator_length, out SearchOperator search_op);
 
             options.SearchOp = search_op;
             options.SearchKey = searchValue.Substring(0, search_operator_index);
             options.SearchValue = searchValue.Substring(search_operator_index + search_operator_length);
         }
 
-        internal static void DetermineSearchOp(string searchValue, out int search_operator_index, out int search_operator_length, out int search_op)
+        /// <summary>
+        /// Read user input and try to determine the search operator and its position in the string.
+        /// Operators (checked in order): ~== (contains), != or &lt;&gt; (not equals), ^= (starts with), 
+        /// $= (ends with), ~= (regex), == (equals), = (equals)
+        /// </summary>
+        internal static void DetermineSearchOp(string searchValue, out int search_operator_index, out int search_operator_length, out SearchOperator search_op)
         {
             search_operator_index = -1;
-            search_operator_length = -1;
-            search_op = -1;
+            search_operator_length = 0;
+            search_op = SearchOperator.None;
 
-            search_operator_index = searchValue.IndexOf("~==");
-            if (search_operator_index > -1) { search_operator_length = 3; search_op = 2; }
-            else
+            // Check for ~== (contains) - must check before ~= 
+            if ((search_operator_index = searchValue.IndexOf("~==")) > 0)
             {
-                search_operator_index = searchValue.IndexOf("==");
-                if (search_operator_index > -1) { search_operator_length = 2; search_op = 1; }
-                else
-                {
-                    search_operator_index = searchValue.IndexOf("=");
-                    if (search_operator_index > -1) { search_operator_length = 1; search_op = 1; }
-                }
+                search_operator_length = 3;
+                search_op = SearchOperator.Contains;
+                return;
+            }
+
+            // Check for != or <> (not equals)
+            if ((search_operator_index = searchValue.IndexOf("!=")) > 0 
+                || (search_operator_index = searchValue.IndexOf("<>")) > 0)
+            {
+                search_operator_length = 2;
+                search_op = SearchOperator.NotEquals;
+                return;
+            }
+
+            // Check for ^= (starts with)
+            if ((search_operator_index = searchValue.IndexOf("^=")) > 0)
+            {
+                search_operator_length = 2;
+                search_op = SearchOperator.StartsWith;
+                return;
+            }
+
+            // Check for $= (ends with)
+            if ((search_operator_index = searchValue.IndexOf("$=")) > 0)
+            {
+                search_operator_length = 2;
+                search_op = SearchOperator.EndsWith;
+                return;
+            }
+
+            // Check for ~= (regex) - must check after ~==
+            if ((search_operator_index = searchValue.IndexOf("~=")) > 0)
+            {
+                search_operator_length = 2;
+                search_op = SearchOperator.Regex;
+                return;
+            }
+
+            // Check for == (equals)
+            if ((search_operator_index = searchValue.IndexOf("==")) > 0)
+            {
+                search_operator_length = 2;
+                search_op = SearchOperator.Equals;
+                return;
+            }
+
+            // Check for = (equals) - must be last
+            if ((search_operator_index = searchValue.IndexOf("=")) > 0)
+            {
+                search_operator_length = 1;
+                search_op = SearchOperator.Equals;
+                return;
             }
         }
 
