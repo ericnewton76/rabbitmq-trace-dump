@@ -6,7 +6,11 @@
     },
     "Profile 1": {
       "commandName": "Project",
-      "commandLineArgs": "c:/var/tmp/rabbitmq-tracing/test-json.log -ip"
+      "commandLineArgs": "-ip"
+    },
+    "Non interactive": {
+      "commandName": "Project",
+      "commandLineArgs": "C:\\var\\tmp\\rabbitmq-tracing\\trace_test.log --filter status=error"
     }
   }
 }

@@ -373,6 +373,7 @@ namespace rabbitmq_trace_dump
             string new_jobject_json = Newtonsoft.Json.JsonConvert.SerializeObject(new_jobject, Runsettings.Pretty ? Formatting.Indented : Formatting.None);
 
             AnsiConsole.Write(new JsonText(new_jobject_json)
+                .MemberColor(Color.DarkOrange)
                 .BracesColor(Color.Gray)
                 .BracketColor(Color.Gray)
                 .StringColor(Color.Yellow)
@@ -381,6 +382,7 @@ namespace rabbitmq_trace_dump
                 .NullColor(Color.Yellow)
             );
 
+            AnsiConsole.WriteLine();
         }
 
         private JObject DecodePayload(JObject jobject)
