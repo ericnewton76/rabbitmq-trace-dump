@@ -14,7 +14,7 @@ namespace rabbitmqTraceDump_Tests
         [Test]
         public void ShouldSkipRecord_NoSearchKey_ReturnsFalse()
         {
-            var options = new ProgramOptions { SearchKey = null };
+            var options = new RunSettings { SearchKey = null };
             var traceDump = new TraceDump(options);
             var jobject = JObject.Parse("""{ "exchange": "my-exchange" }""");
 
@@ -31,7 +31,7 @@ namespace rabbitmqTraceDump_Tests
         [Test]
         public void ShouldSkipRecord_EqualsOperator_MatchingValue_ReturnsFalse()
         {
-            var options = new ProgramOptions
+            var options = new RunSettings
             {
                 SearchKey = "exchange",
                 SearchValue = "my-exchange",
@@ -49,7 +49,7 @@ namespace rabbitmqTraceDump_Tests
         [Test]
         public void ShouldSkipRecord_EqualsOperator_NonMatchingValue_ReturnsTrue()
         {
-            var options = new ProgramOptions
+            var options = new RunSettings
             {
                 SearchKey = "exchange",
                 SearchValue = "other-exchange",
@@ -66,7 +66,7 @@ namespace rabbitmqTraceDump_Tests
         [Test]
         public void ShouldSkipRecord_EqualsOperator_CaseInsensitive_ReturnsFalse()
         {
-            var options = new ProgramOptions
+            var options = new RunSettings
             {
                 SearchKey = "exchange",
                 SearchValue = "MY-EXCHANGE",
@@ -83,7 +83,7 @@ namespace rabbitmqTraceDump_Tests
         [Test]
         public void ShouldSkipRecord_EqualsOperator_KeyNotFound_ReturnsTrue()
         {
-            var options = new ProgramOptions
+            var options = new RunSettings
             {
                 SearchKey = "nonexistent",
                 SearchValue = "value",
@@ -104,7 +104,7 @@ namespace rabbitmqTraceDump_Tests
         [Test]
         public void ShouldSkipRecord_NotEqualsOperator_DifferentValue_ReturnsFalse()
         {
-            var options = new ProgramOptions
+            var options = new RunSettings
             {
                 SearchKey = "type",
                 SearchValue = "deliver",
@@ -121,7 +121,7 @@ namespace rabbitmqTraceDump_Tests
         [Test]
         public void ShouldSkipRecord_NotEqualsOperator_SameValue_ReturnsTrue()
         {
-            var options = new ProgramOptions
+            var options = new RunSettings
             {
                 SearchKey = "type",
                 SearchValue = "publish",
@@ -142,7 +142,7 @@ namespace rabbitmqTraceDump_Tests
         [Test]
         public void ShouldSkipRecord_ContainsOperator_SubstringMatch_ReturnsFalse()
         {
-            var options = new ProgramOptions
+            var options = new RunSettings
             {
                 SearchKey = "routing_key",
                 SearchValue = "order",
@@ -159,7 +159,7 @@ namespace rabbitmqTraceDump_Tests
         [Test]
         public void ShouldSkipRecord_ContainsOperator_NoMatch_ReturnsTrue()
         {
-            var options = new ProgramOptions
+            var options = new RunSettings
             {
                 SearchKey = "routing_key",
                 SearchValue = "product",
@@ -176,7 +176,7 @@ namespace rabbitmqTraceDump_Tests
         [Test]
         public void ShouldSkipRecord_ContainsOperator_CaseInsensitive_ReturnsFalse()
         {
-            var options = new ProgramOptions
+            var options = new RunSettings
             {
                 SearchKey = "routing_key",
                 SearchValue = "ORDER",
@@ -197,7 +197,7 @@ namespace rabbitmqTraceDump_Tests
         [Test]
         public void ShouldSkipRecord_StartsWithOperator_MatchingPrefix_ReturnsFalse()
         {
-            var options = new ProgramOptions
+            var options = new RunSettings
             {
                 SearchKey = "routing_key",
                 SearchValue = "orders.",
@@ -214,7 +214,7 @@ namespace rabbitmqTraceDump_Tests
         [Test]
         public void ShouldSkipRecord_StartsWithOperator_NonMatchingPrefix_ReturnsTrue()
         {
-            var options = new ProgramOptions
+            var options = new RunSettings
             {
                 SearchKey = "routing_key",
                 SearchValue = "products.",
@@ -235,7 +235,7 @@ namespace rabbitmqTraceDump_Tests
         [Test]
         public void ShouldSkipRecord_EndsWithOperator_MatchingSuffix_ReturnsFalse()
         {
-            var options = new ProgramOptions
+            var options = new RunSettings
             {
                 SearchKey = "routing_key",
                 SearchValue = ".created",
@@ -252,7 +252,7 @@ namespace rabbitmqTraceDump_Tests
         [Test]
         public void ShouldSkipRecord_EndsWithOperator_NonMatchingSuffix_ReturnsTrue()
         {
-            var options = new ProgramOptions
+            var options = new RunSettings
             {
                 SearchKey = "routing_key",
                 SearchValue = ".updated",
@@ -273,7 +273,7 @@ namespace rabbitmqTraceDump_Tests
         [Test]
         public void ShouldSkipRecord_RegexOperator_MatchingPattern_ReturnsFalse()
         {
-            var options = new ProgramOptions
+            var options = new RunSettings
             {
                 SearchKey = "routing_key",
                 SearchValue = """^orders\.\w+$""",
@@ -290,7 +290,7 @@ namespace rabbitmqTraceDump_Tests
         [Test]
         public void ShouldSkipRecord_RegexOperator_NonMatchingPattern_ReturnsTrue()
         {
-            var options = new ProgramOptions
+            var options = new RunSettings
             {
                 SearchKey = "routing_key",
                 SearchValue = """^products\.\d+$""",
@@ -307,7 +307,7 @@ namespace rabbitmqTraceDump_Tests
         [Test]
         public void ShouldSkipRecord_RegexOperator_InvalidPattern_ReturnsTrue()
         {
-            var options = new ProgramOptions
+            var options = new RunSettings
             {
                 SearchKey = "routing_key",
                 SearchValue = "[invalid(regex",
@@ -328,7 +328,7 @@ namespace rabbitmqTraceDump_Tests
         [Test]
         public void ShouldSkipRecord_NestedProperty_UsingSelectToken_ReturnsFalse()
         {
-            var options = new ProgramOptions
+            var options = new RunSettings
             {
                 SearchKey = "properties.headers.x-custom",
                 SearchValue = "test-value",
@@ -354,7 +354,7 @@ namespace rabbitmqTraceDump_Tests
         [Test]
         public void ShouldSkipRecord_PayloadKey_SetsPayloadDecodedTrue()
         {
-            var options = new ProgramOptions
+            var options = new RunSettings
             {
                 SearchKey = "payload.someField",
                 SearchValue = "value",
@@ -375,7 +375,7 @@ namespace rabbitmqTraceDump_Tests
         [Test]
         public void ShouldSkipRecord_EmptyStringValue_EqualsEmpty_ReturnsFalse()
         {
-            var options = new ProgramOptions
+            var options = new RunSettings
             {
                 SearchKey = "exchange",
                 SearchValue = "",
@@ -392,7 +392,7 @@ namespace rabbitmqTraceDump_Tests
         [Test]
         public void ShouldSkipRecord_NullTokenValue_WithEmptyExpected_ReturnsFalse()
         {
-            var options = new ProgramOptions
+            var options = new RunSettings
             {
                 SearchKey = "exchange",
                 SearchValue = "",
@@ -409,7 +409,7 @@ namespace rabbitmqTraceDump_Tests
         [Test]
         public void ShouldSkipRecord_NullTokenValue_WithNonEmptyExpected_ReturnsTrue()
         {
-            var options = new ProgramOptions
+            var options = new RunSettings
             {
                 SearchKey = "exchange",
                 SearchValue = "value",

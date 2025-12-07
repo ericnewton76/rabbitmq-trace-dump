@@ -22,20 +22,22 @@ namespace rabbitmq_trace_dump
             var results = CommandLine.Parser.Default.ParseArguments<ProgramOptions>(args);
             var options = results.Value;
 
+            RunSettings runsettings;
+
             if (results.Errors.Count() == 0)
             {
-                if (ValidateOptions(options) == false) return;
+                if (ValidateOptions(options, out runsettings) == false) return;
 
                 if (options.Interactive && string.IsNullOrEmpty(options.InputFile))
                 {
-                    SelectFile(options);
-                    if (string.IsNullOrEmpty(options.InputFile)) return;
+                    SelectFile(runsettings);
+                    if (string.IsNullOrEmpty(runsettings.InputFile)) return;
                 }
 
                 try
                 {
-                    var traceDump = new TraceDump(options);
-                    traceDump.REadFileREAD(options.InputFile, Console.Out);
+                    var traceDump = new TraceDump(runsettings);
+                    traceDump.REadFileREAD(runsettings.InputFile, Console.Out);
                 }
                 catch(Exception ex)
                 {
@@ -44,7 +46,7 @@ namespace rabbitmq_trace_dump
             }
         }
 
-        private static void SelectFile(ProgramOptions options)
+        private static void SelectFile(RunSettings options)
         {
             var directory = "C:/var/tmp/rabbitmq-tracing"; //default directory that rabbitmq on windows writes trace files to
 
@@ -57,15 +59,27 @@ namespace rabbitmq_trace_dump
             if (string.IsNullOrEmpty(selectedFile) == false) options.InputFile = selectedFile;
         }   
 
-        private static bool ValidateOptions(ProgramOptions options)
+        private static bool ValidateOptions(ProgramOptions options, out RunSettings runsettings)
         {
-            
-            if (options == null) return false;
+            runsettings = new RunSettings();
+
+            if (options == null || String.IsNullOrEmpty(options.InputFile))
+            {
+                if (Console.IsInputRedirected)
+                {
+                    runsettings.InputFile = "<stdin>";
+                    return true;
+                }
+            }
+
+            //transfer from options
+            runsettings.Interactive = options.Interactive;
+            runsettings.Pretty = options.Pretty;
+            runsettings.HiddenProperties = options.HiddenProperties ?? Enumerable.Empty<string>();
 
             // Validate input file, make sure it exists, check if console input is redirected
             if (string.IsNullOrEmpty(options.InputFile) == false)
             {
-
                 if (File.Exists(options.InputFile) == false)
                 {
                     Console.WriteLine("Input file '{0}' wasnt found.", options.InputFile);
@@ -73,26 +87,31 @@ namespace rabbitmq_trace_dump
                 }
             }
 
-            if (options.Search != null) { ParseSearch(options, options.Search); return true; }
+            runsettings.InputFile = options.InputFile;
+
+            if (string.IsNullOrEmpty(options.Filter) == false)
+            { 
+                ParseSearch(runsettings, options.Filter); 
+            }
 
             return true;
         }
 
-        internal static void ParseSearch(ProgramOptions options, string searchValue)
+        internal static void ParseSearch(RunSettings runsettings, string searchValue)
         {
             if (string.IsNullOrEmpty(searchValue))
             {
-                options.SearchOp = SearchOperator.None;
-                options.SearchKey = null;
-                options.SearchValue = null;
+                runsettings.SearchOp = SearchOperator.None;
+                runsettings.SearchKey = null;
+                runsettings.SearchValue = null;
                 return;
             }
 
             DetermineSearchOp(searchValue, out int search_operator_index, out int search_operator_length, out SearchOperator search_op);
 
-            options.SearchOp = search_op;
-            options.SearchKey = searchValue.Substring(0, search_operator_index);
-            options.SearchValue = searchValue.Substring(search_operator_index + search_operator_length);
+            runsettings.SearchOp = search_op;
+            runsettings.SearchKey = searchValue.Substring(0, search_operator_index);
+            runsettings.SearchValue = searchValue.Substring(search_operator_index + search_operator_length);
         }
 
         /// <summary>

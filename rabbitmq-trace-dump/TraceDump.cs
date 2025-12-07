@@ -18,11 +18,11 @@ namespace rabbitmq_trace_dump
     internal class TraceDump
     {
 
-        public TraceDump(ProgramOptions options)
+        public TraceDump(RunSettings runsettings)
         {
-            this.ProgramOptions = options;
+            this.Runsettings = runsettings;
         }
-        private ProgramOptions ProgramOptions;
+        private RunSettings Runsettings;
 
         private static List<(int recordIndex, long position)> _recordPositions = new List<(int, long)>(1000);
         private static int _currentRecordIndex;
@@ -30,7 +30,7 @@ namespace rabbitmq_trace_dump
 
         public void REadFileREAD(string tracelogPath, TextWriter output)
         {
-            JsonWriterSettings payloadWriterSettings = new JsonWriterSettings() { Indent = (ProgramOptions.Pretty || ProgramOptions.Interactive) };
+            JsonWriterSettings payloadWriterSettings = new JsonWriterSettings() { Indent = (Runsettings.Pretty || Runsettings.Interactive) };
 
             using (var fs = new FileStream(tracelogPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
             {
@@ -57,7 +57,7 @@ namespace rabbitmq_trace_dump
 
                     if (sr.EndOfStream || currentLine == null)
                     {
-                        if (ProgramOptions.Interactive)
+                        if (Runsettings.Interactive)
                         {
                             Console.WriteLine("EOF");
                             goto user_interactive;
@@ -74,7 +74,7 @@ namespace rabbitmq_trace_dump
                         _maxPosition = fs.Position;
                     }
 
-                    if (ProgramOptions.Interactive)
+                    if (Runsettings.Interactive)
                     {
                         //display top banner when in interactive mode
                         Console.WriteLine("RecordIndex={0} Position={1}", _currentRecordIndex, _recordPosition);
@@ -90,9 +90,9 @@ namespace rabbitmq_trace_dump
                     {
                         skipCount++;
 
-                        if (ProgramOptions.Interactive)
+                        if (Runsettings.Interactive)
                         {
-                            output.WriteLine("/{0}={1}", ProgramOptions.SearchKey, ProgramOptions.SearchValue);
+                            output.WriteLine("/{0}={1}", Runsettings.SearchKey, Runsettings.SearchValue);
                             if (skipCount > -1) output.WriteLine("skipped: {0} -----------------------------------------------", skipCount);
                             //output.WriteLine(jobject);
                         }
@@ -103,14 +103,14 @@ namespace rabbitmq_trace_dump
                     DisplayRecord(payloadDecoded, jobject, output);
 
                 user_interactive:
-                    if (ProgramOptions.Interactive)
+                    if (Runsettings.Interactive)
                     {
                         ConsoleKeyInfo key = Console.ReadKey(intercept: true);
                         if (key.KeyChar == '/')
                         {
                             Console.Write("/");
                             string searchFor = Console.ReadLine();
-                            Program.ParseSearch(ProgramOptions, searchFor);
+                            Program.ParseSearch(Runsettings, searchFor);
                             continue;
                         }
                         else
@@ -265,21 +265,21 @@ namespace rabbitmq_trace_dump
         {
             payloadDecoded = false;
 
-            if (ProgramOptions.SearchKey == null) 
+            if (Runsettings.SearchKey == null) 
                 return false;
 
             try
             {
-                if (ProgramOptions.SearchKey.StartsWith("payload."))
+                if (Runsettings.SearchKey.StartsWith("payload."))
                 {
                     payloadDecoded = true;
                     DecodePayload(jobject);
                 }
 
-                JToken token = jobject.SelectToken(ProgramOptions.SearchKey);
+                JToken token = jobject.SelectToken(Runsettings.SearchKey);
                 if (token == null) { return true; }
 
-                if (TryCompare(token, ProgramOptions.SearchValue, ProgramOptions.SearchOp) == 0) { return false; }
+                if (TryCompare(token, Runsettings.SearchValue, Runsettings.SearchOp) == 0) { return false; }
             }
             catch (Exception ex)
             {
@@ -364,13 +364,13 @@ namespace rabbitmq_trace_dump
         private void DisplayRecord(bool payloadDecoded, JObject jobject, TextWriter output)
         {
             //remove any properties that are specified as Hidden
-            if (ProgramOptions.HiddenProperties != null)
+            if (Runsettings.HiddenProperties != null)
             {
-                foreach (var prop in ProgramOptions.HiddenProperties) jobject.Remove(prop);
+                foreach (var prop in Runsettings.HiddenProperties) jobject.Remove(prop);
             }
 
             var new_jobject = payloadDecoded ? jobject : DecodePayload(jobject);
-            string new_jobject_json = Newtonsoft.Json.JsonConvert.SerializeObject(new_jobject, ProgramOptions.Pretty ? Formatting.Indented : Formatting.None);
+            string new_jobject_json = Newtonsoft.Json.JsonConvert.SerializeObject(new_jobject, Runsettings.Pretty ? Formatting.Indented : Formatting.None);
 
             AnsiConsole.Write(new JsonText(new_jobject_json)
                 .BracesColor(Color.Gray)

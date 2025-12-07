@@ -6,14 +6,9 @@ using System.ComponentModel;
 
 namespace rabbitmq_trace_dump
 {
-
-
-    /// <summary>
-    /// parsed command line options
-    /// </summary>
-    public class ProgramOptions
+    internal class RunSettings
     {
-        public ProgramOptions()
+        public RunSettings()
         {
             //HiddenProperties = new[] { "node", "channel" };
         }
@@ -24,16 +19,17 @@ namespace rabbitmq_trace_dump
         [Option("hide", Separator = ',', HelpText = "List of properties to be hidden in output")]
         public IEnumerable<string> HiddenProperties { get; set; }
 
-        [Option('i')]
+        /// <summary>program should run in interactive mode.</summary>
         public bool Interactive { get; set; } = false;
 
-        [Option('p')]        
+        /// <summary>Gets or sets a value indicating whether the output should be formatted for readability.</summary>
         public bool Pretty { get; set; } = false;
 
-        [Value(index:0)]
         public string InputFile { get; set; }
 
-        [Option]
-        public string Filter { get; set; }
+      
+        public string SearchKey { get; set; }
+        public string SearchValue { get; internal set; }
+        public SearchOperator SearchOp { get; set; }
     }
 }

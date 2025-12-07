@@ -14,7 +14,7 @@ namespace rabbitmqTraceDump_Tests
         [SetUp]
         public void SetUp()
         {
-            _traceDump = new TraceDump(new ProgramOptions());
+            _traceDump = new TraceDump(new RunSettings());
         }
 
         #region String Type Tests
