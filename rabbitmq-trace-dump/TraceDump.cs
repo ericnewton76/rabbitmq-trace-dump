@@ -86,7 +86,7 @@ namespace rabbitmq_trace_dump
                     var payloadDecoded = false;
                     var jobject = JToken.Parse(currentLine) as JObject;
 
-                    if (CheckRecordFilter(jobject, output, out payloadDecoded) == true)
+                    if (ShouldSkipRecord(jobject, out payloadDecoded) == true)
                     {
                         skipCount++;
 
@@ -223,7 +223,17 @@ namespace rabbitmq_trace_dump
             }
         }
 
-        private bool CheckRecordFilter(JObject jobject, TextWriter output, out bool payloadDecoded)
+        /// <summary>
+        /// Determines whether the specified record should be skipped based on the current search criteria.
+        /// </summary>
+        /// <remarks>If the search key begins with "payload.", the payload section of the record is
+        /// decoded before evaluation. If no search key is specified, all records are included and none are
+        /// skipped.</remarks>
+        /// <param name="jobject">The JSON object representing the record to evaluate.</param>
+        /// <param name="payloadDecoded">When this method returns, contains <see langword="true"/> if the payload was decoded as part of the search;
+        /// otherwise, <see langword="false"/>. This parameter is passed uninitialized.</param>
+        /// <returns>true if the record does not match the search criteria and should be skipped; otherwise, false.</returns>
+        internal bool ShouldSkipRecord(JObject jobject, out bool payloadDecoded)
         {
             payloadDecoded = false;
 
@@ -239,14 +249,14 @@ namespace rabbitmq_trace_dump
                 }
 
                 JToken token = jobject.SelectToken(ProgramOptions.SearchKey);
-                if (token == null) { return false; }
+                if (token == null) { return true; }
 
-                string val = token.Value<string>();
-                if (TryCompare(val, ProgramOptions.SearchValue, ProgramOptions.SearchOp) != 0) { return false; }
+                if (TryCompare(token, ProgramOptions.SearchValue, ProgramOptions.SearchOp) == 0) { return false; }
             }
             catch (Exception ex)
             {
                 string ex2 = ex.ToString();
+                //this is a problem condition right now, not sure what to do
             }
 
             return true;
@@ -259,8 +269,34 @@ namespace rabbitmq_trace_dump
         /// <param name="expected">The expected value to compare against.</param>
         /// <param name="searchOp">The comparison operation to perform.</param>
         /// <returns>0 if match, non-zero if no match.</returns>
-        private int TryCompare(string actual, string expected, SearchOperator searchOp)
+        internal int TryCompare(JToken value, string expected, SearchOperator searchOp)
         {
+            string actual = null;
+
+            switch (value.Type)
+            {
+                case JTokenType.None:
+                case JTokenType.Null:
+                    // Both null or none    
+                    return string.IsNullOrEmpty(expected) ? 0 : -1;
+
+                case JTokenType.Integer:
+                case JTokenType.Float:
+                    actual = value.ToString();
+                    break; 
+
+                case JTokenType.Boolean:
+                    actual = value.ToString();
+                    break;
+                
+                case JTokenType.String:
+                    actual = value.Value<string>();
+                    break;
+
+                default:
+                    throw new InvalidOperationException($"Unexpected JTokenType '{value.Type}' at path '{value.Path}' for comparison.");
+            }
+
             if (actual == null && expected == null) return 0;
             if (actual == null || expected == null) return -1;
 
