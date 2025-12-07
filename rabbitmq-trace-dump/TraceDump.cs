@@ -161,19 +161,46 @@ namespace rabbitmq_trace_dump
                                 case ConsoleKey.UpArrow:
                                     Console.Clear();
 
-                                    _currentRecordIndex--;
-                                    if (_currentRecordIndex < 0) _currentRecordIndex = 0;
+                                    // Search backward for a matching record
+                                    int targetIndex = (_currentRecordIndex > _recordPositions.Count ? _recordPositions.Count-1 :  _currentRecordIndex - 1);
+                                    bool foundMatch = false;
 
-                                    if (_currentRecordIndex > -1)
-                                        fs.Position = _recordPositions[_currentRecordIndex].position;
-                                    else
-                                        fs.Position = 0;
+                                    while (targetIndex >= 0 && targetIndex <= _recordPositions.Count)
+                                    {
+                                        // Seek to the candidate record position
+                                        fs.Position = _recordPositions[targetIndex].position;
+                                        string line = sr.ReadLine();
 
-                                    //subtract again because its incremented on first line of while(true)
-                                    _currentRecordIndex--;
+                                        if (line != null)
+                                        {
+                                            var candidateObject = JToken.Parse(line) as JObject;
 
-                                    //sr.FindBack("\n");
-                                    //sr.SeekMark();
+                                            // Check if this record matches the search filter (or no filter is active)
+                                            if (!ShouldSkipRecord(candidateObject, out _))
+                                            {
+                                                // Found a matching record - seek back to it
+                                                fs.Position = _recordPositions[targetIndex].position;
+                                                _currentRecordIndex = targetIndex - 1; // -1 because loop increments
+                                                foundMatch = true;
+                                                break;
+                                            }
+                                        }
+
+                                        targetIndex--;
+                                    }
+
+                                    if (!foundMatch)
+                                    {
+                                        // No matching record found, stay at current position or go to beginning
+                                        if (_recordPositions.Count > 0)
+                                        {
+                                            fs.Position = _recordPositions[0].position;
+                                            _currentRecordIndex = -1;
+                                        }
+
+                                        goto user_interactive;
+                                    }
+
                                     _seeking = true;
                                     break;
 
