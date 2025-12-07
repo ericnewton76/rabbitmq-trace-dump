@@ -124,6 +124,38 @@ namespace rabbitmq_trace_dump
 
                                 //        break;
 
+                                case ConsoleKey.End:
+                                    Console.Clear();
+                                    Console.WriteLine("Seeking to end of file...");
+
+                                    // Read through all remaining records to build position index
+                                    while (!sr.EndOfStream)
+                                    {
+                                        long pos = fs.Position;
+                                        string line = sr.ReadLine();
+                                        if (line == null) break;
+
+                                        _currentRecordIndex++;
+
+                                        // Record position if moving beyond previous max
+                                        if (fs.Position > _maxPosition)
+                                        {
+                                            _recordPositions.Add((_currentRecordIndex, pos));
+                                            _maxPosition = fs.Position;
+                                        }
+                                    }
+
+                                    // Backtrack to the last record
+                                    if (_recordPositions.Count > 0)
+                                    {
+                                        var lastRecord = _recordPositions[_recordPositions.Count - 1];
+                                        fs.Position = lastRecord.position;
+                                        _currentRecordIndex = lastRecord.recordIndex - 1; // -1 because loop increments
+                                    }
+
+                                    Console.WriteLine("At record {0} of {1}", _currentRecordIndex + 1, _recordPositions.Count);
+                                    break;
+
                                 case ConsoleKey.UpArrow:
                                     Console.Clear();
 
@@ -174,8 +206,8 @@ namespace rabbitmq_trace_dump
                                     break;
 
                                 case ConsoleKey.H:
-                                    Console.WriteLine(@"R: reset to beginning  S:skip [count]  Spacebar:Clear/Next record  ");
-                                    Console.WriteLine(@"Up:back");
+                                    Console.WriteLine(@"[R] and [Home]: reset to beginning  [S]:skip [count]  [Spacebar] and [Down]:Clear/Next record  ");
+                                    Console.WriteLine(@"[Up]:back  [End]:seek to last record");
                                     break;
 
                                 default:
