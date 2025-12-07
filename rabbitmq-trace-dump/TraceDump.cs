@@ -372,7 +372,8 @@ namespace rabbitmq_trace_dump
             var new_jobject = payloadDecoded ? jobject : DecodePayload(jobject);
             string new_jobject_json = Newtonsoft.Json.JsonConvert.SerializeObject(new_jobject, Runsettings.Pretty ? Formatting.Indented : Formatting.None);
 
-            if (this.Runsettings.Pretty || this.Runsettings.Interactive)
+            //runsettings.nocolor is intended to not run AnsiConsole at all since it json parses the json text to output with colors which is slower than just writing the json text directly
+            if (this.Runsettings.NoColor == false && (this.Runsettings.Pretty || this.Runsettings.Interactive))
             {
                 AnsiConsole.Write(new JsonText(new_jobject_json)
                     .MemberColor(Color.DarkOrange)
@@ -382,6 +383,7 @@ namespace rabbitmq_trace_dump
                     .NumberColor(Color.Yellow)
                     .BooleanColor(Color.Yellow)
                     .NullColor(Color.Yellow)
+                    //.Compact() <-- i might pull request this into Spectre.Console later
                 );
 
                 AnsiConsole.WriteLine();

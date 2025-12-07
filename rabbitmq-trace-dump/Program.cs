@@ -77,6 +77,13 @@ namespace rabbitmq_trace_dump
             runsettings.Pretty = options.Pretty.GetValueOrDefault();
             runsettings.HiddenProperties = options.HiddenProperties ?? Enumerable.Empty<string>();
 
+            //check for NO_COLOR=1 environment variable to disable colors
+            var no_color = Environment.GetEnvironmentVariable("NO_COLOR");
+            if (no_color == "1")
+            {
+                runsettings.NoColor = true; //we end up disabling using AnsiConsole for output because its slower for json output (literally parsing the json its outputting)
+            }
+
             // Validate input file, make sure it exists, check if console input is redirected
             if (string.IsNullOrEmpty(options.InputFile) == false)
             {

@@ -31,5 +31,6 @@ namespace rabbitmq_trace_dump
         public string SearchKey { get; set; }
         public string SearchValue { get; internal set; }
         public SearchOperator SearchOp { get; set; }
+        public bool NoColor { get; internal set; }
     }
 }
