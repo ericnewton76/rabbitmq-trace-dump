@@ -28,7 +28,7 @@ namespace rabbitmq_trace_dump
             {
                 if (ValidateOptions(options, out runsettings) == false) return;
 
-                if (options.Interactive && string.IsNullOrEmpty(options.InputFile))
+                if (options.Interactive.GetValueOrDefault() && string.IsNullOrEmpty(options.InputFile))
                 {
                     SelectFile(runsettings);
                     if (string.IsNullOrEmpty(runsettings.InputFile)) return;
@@ -73,8 +73,8 @@ namespace rabbitmq_trace_dump
             }
 
             //transfer from options
-            runsettings.Interactive = options.Interactive;
-            runsettings.Pretty = options.Pretty;
+            runsettings.Interactive = options.Interactive.GetValueOrDefault();
+            runsettings.Pretty = options.Pretty.GetValueOrDefault();
             runsettings.HiddenProperties = options.HiddenProperties ?? Enumerable.Empty<string>();
 
             // Validate input file, make sure it exists, check if console input is redirected

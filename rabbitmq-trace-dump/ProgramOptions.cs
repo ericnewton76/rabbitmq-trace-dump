@@ -25,10 +25,10 @@ namespace rabbitmq_trace_dump
         public IEnumerable<string> HiddenProperties { get; set; }
 
         [Option('i')]
-        public bool Interactive { get; set; } = false;
+        public bool? Interactive { get; set; }
 
         [Option('p')]        
-        public bool Pretty { get; set; } = false;
+        public bool? Pretty { get; set; }
 
         [Value(index:0)]
         public string InputFile { get; set; }

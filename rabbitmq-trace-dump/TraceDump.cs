@@ -372,17 +372,24 @@ namespace rabbitmq_trace_dump
             var new_jobject = payloadDecoded ? jobject : DecodePayload(jobject);
             string new_jobject_json = Newtonsoft.Json.JsonConvert.SerializeObject(new_jobject, Runsettings.Pretty ? Formatting.Indented : Formatting.None);
 
-            AnsiConsole.Write(new JsonText(new_jobject_json)
-                .MemberColor(Color.DarkOrange)
-                .BracesColor(Color.Gray)
-                .BracketColor(Color.Gray)
-                .StringColor(Color.Yellow)
-                .NumberColor(Color.Yellow)
-                .BooleanColor(Color.Yellow)
-                .NullColor(Color.Yellow)
-            );
+            if (this.Runsettings.Pretty || this.Runsettings.Interactive)
+            {
+                AnsiConsole.Write(new JsonText(new_jobject_json)
+                    .MemberColor(Color.DarkOrange)
+                    .BracesColor(Color.Gray)
+                    .BracketColor(Color.Gray)
+                    .StringColor(Color.Yellow)
+                    .NumberColor(Color.Yellow)
+                    .BooleanColor(Color.Yellow)
+                    .NullColor(Color.Yellow)
+                );
 
-            AnsiConsole.WriteLine();
+                AnsiConsole.WriteLine();
+            }
+            else
+            {
+                Console.WriteLine(new_jobject_json);
+            }
         }
 
         private JObject DecodePayload(JObject jobject)
