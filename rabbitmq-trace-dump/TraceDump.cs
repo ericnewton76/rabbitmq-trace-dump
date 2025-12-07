@@ -82,9 +82,10 @@ namespace rabbitmq_trace_dump
                     //if skipping is active, then keep skipping
                     if (_skipCountTarget > 0) { _skipCountTarget--; continue; }
 
+                    var payloadDecoded = false;
                     var jobject = JToken.Parse(currentLine) as JObject;
 
-                    if (CheckRecordFilter(jobject, output) == true)
+                    if (CheckRecordFilter(jobject, output, out payloadDecoded) == true)
                     {
                         skipCount++;
 
@@ -98,7 +99,7 @@ namespace rabbitmq_trace_dump
                     }
 
                     //write current rabbitmq record as json and decode the payload into a BsonDocument
-                    DisplayRecord(jobject, output);
+                    DisplayRecord(payloadDecoded, jobject, output);
 
                 user_interactive:
                     if (ProgramOptions.Interactive)
@@ -221,14 +222,22 @@ namespace rabbitmq_trace_dump
             }
         }
 
-        private bool CheckRecordFilter(JObject jobject, TextWriter output)
+        private bool CheckRecordFilter(JObject jobject, TextWriter output, out bool payloadDecoded)
         {
-            if (ProgramOptions.SearchKey == null) return false;
+            payloadDecoded = false;
 
+            if (ProgramOptions.SearchKey == null) 
+                return false;
 
             try
             {
-                JToken token = jobject[ProgramOptions.SearchKey];
+                if (ProgramOptions.SearchKey.StartsWith("payload."))
+                {
+                    payloadDecoded = true;
+                    DecodePayload(jobject);
+                }
+
+                JToken token = jobject.SelectToken(ProgramOptions.SearchKey);
                 if (token == null) { return false; }
 
                 string val = token.Value<string>();
@@ -242,7 +251,7 @@ namespace rabbitmq_trace_dump
             return true;
         }
 
-        private void DisplayRecord(JObject jobject, TextWriter output)
+        private void DisplayRecord(bool payloadDecoded, JObject jobject, TextWriter output)
         {
             //remove any properties that are specified as Hidden
             if (ProgramOptions.HiddenProperties != null)
@@ -250,7 +259,7 @@ namespace rabbitmq_trace_dump
                 foreach (var prop in ProgramOptions.HiddenProperties) jobject.Remove(prop);
             }
 
-            var new_jobject = DecodePayload(jobject);
+            var new_jobject = payloadDecoded ? jobject : DecodePayload(jobject);
             string new_jobject_json = Newtonsoft.Json.JsonConvert.SerializeObject(new_jobject, ProgramOptions.Pretty ? Formatting.Indented : Formatting.None);
 
             AnsiConsole.Write(new JsonText(new_jobject_json)
