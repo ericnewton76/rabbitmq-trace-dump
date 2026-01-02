@@ -35,5 +35,16 @@ namespace rabbitmq_trace_dump
 
         [Option]
         public string Filter { get; set; }
+
+        [Option('d', "payload-decoder", HelpText = "Specifies the payload decoder to use. Supported values are: none, bson, json, utf8")]
+        public PayloadDecoderTypes PayloadDecoder { get; set; } = PayloadDecoderTypes.none;
+    }
+
+    public enum PayloadDecoderTypes
+    {
+        none,
+        bson,
+        json,
+        utf8
     }
 }

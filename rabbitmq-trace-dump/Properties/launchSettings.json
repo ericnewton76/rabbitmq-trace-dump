@@ -2,7 +2,7 @@
   "profiles": {
     "rabbitmq-trace-dump": {
       "commandName": "Project",
-      "commandLineArgs": "-ip c:/var/tmp/rabbitmq-tracing/trace1.log --hide connection,channel,node,user,type,vhost"
+      "commandLineArgs": "-i true -p true c:/var/tmp/rabbitmq-tracing/trace1.log --hide connection,channel,node,user,type,vhost"
     },
     "Profile 1": {
       "commandName": "Project",

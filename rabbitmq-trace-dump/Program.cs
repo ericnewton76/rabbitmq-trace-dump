@@ -101,6 +101,8 @@ namespace rabbitmq_trace_dump
                 ParseSearch(runsettings, options.Filter); 
             }
 
+            runsettings.PayloadDecoder = options.PayloadDecoder;
+
             return true;
         }
 

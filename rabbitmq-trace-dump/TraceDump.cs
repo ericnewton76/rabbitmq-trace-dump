@@ -237,7 +237,14 @@ namespace rabbitmq_trace_dump
 
                                 case ConsoleKey.H:
                                     Console.WriteLine(@"[R] and [Home]: reset to beginning  [S]:skip [count]  [Spacebar] and [Down]:Clear/Next record  ");
-                                    Console.WriteLine(@"[Up]:back  [End]:seek to last record");
+                                    Console.WriteLine(@"[Up]:back  [End]:seek to last record  [D]:payload decoder");
+                                    break;
+
+                                case ConsoleKey.D:
+                                    var values = Enum.GetValues<PayloadDecoderTypes>();
+                                    int currentIndex = Array.IndexOf(values, Runsettings.PayloadDecoder);
+                                    Runsettings.PayloadDecoder = values[(currentIndex + 1) % values.Length];
+                                    Console.WriteLine("Payload decoder: {0}", Runsettings.PayloadDecoder);
                                     break;
 
                                 default:
@@ -404,46 +411,71 @@ namespace rabbitmq_trace_dump
 
                 if (string.IsNullOrEmpty(payloadValue) == false)
                 {
-                    byte[] bytes;
-                    try
+                    switch (Runsettings.PayloadDecoder)
                     {
-                        bytes = Convert.FromBase64String(payloadValue);
-                    }
-                    catch { bytes = null; }
-
-                    try
-                    {
-                        var doc = BsonSerializer.Deserialize<BsonDocument>(bytes);
-
-                        // Use RelaxedExtendedJson to output standard JSON-compatible format
-                        var jsonWriterSettings = new JsonWriterSettings
-                        {
-                            Indent = false,
-                            OutputMode = JsonOutputMode.RelaxedExtendedJson
-                        };
-                        var jsonString = doc.ToJson(jsonWriterSettings);
-                        jobject["payload"] = JObject.Parse(jsonString);
-
-                        bytes = null;
-                    }
-                    catch (FormatException f_ex)
-                    {
-                        if (Console.IsOutputRedirected) Console.Error.WriteLine(f_ex.Message);
-                    }
-
-                    if (bytes != null)
-                    {
-                        try
-                        {
-                            jobject["payload"] = System.Text.Encoding.ASCII.GetString(bytes);
-                            bytes = null;
-                        }
-                        catch { }
+                        case PayloadDecoderTypes.none:
+                            break;
+                        case PayloadDecoderTypes.json:
+                            DecodePayloadAsJson(jobject, payloadValue);
+                            break;
+                        case PayloadDecoderTypes.bson:
+                            DecodePayloadAsBson(jobject, payloadValue);
+                            break;
+                        case PayloadDecoderTypes.utf8:
+                            DecodePayloadAsUtf8(jobject, payloadValue);
+                            break;
                     }
                 }
             }
 
             return jobject;
+        }
+
+        private static void DecodePayloadAsJson(JObject jobject, string payloadValue)
+        {
+            try
+            {
+                byte[] jsonBytes = Convert.FromBase64String(payloadValue);
+                string jsonString = System.Text.Encoding.UTF8.GetString(jsonBytes);
+                jobject["payload"] = JToken.Parse(jsonString);
+            }
+            catch (Exception ex)
+            {
+                if (Console.IsOutputRedirected) Console.Error.WriteLine(ex.Message);
+            }
+        }
+
+        private static void DecodePayloadAsBson(JObject jobject, string payloadValue)
+        {
+            try
+            {
+                byte[] bsonBytes = Convert.FromBase64String(payloadValue);
+                var doc = BsonSerializer.Deserialize<BsonDocument>(bsonBytes);
+                var jsonWriterSettings = new JsonWriterSettings
+                {
+                    Indent = false,
+                    OutputMode = JsonOutputMode.RelaxedExtendedJson
+                };
+                var bsonJsonString = doc.ToJson(jsonWriterSettings);
+                jobject["payload"] = JObject.Parse(bsonJsonString);
+            }
+            catch (Exception ex)
+            {
+                if (Console.IsOutputRedirected) Console.Error.WriteLine(ex.Message);
+            }
+        }
+
+        private static void DecodePayloadAsUtf8(JObject jobject, string payloadValue)
+        {
+            try
+            {
+                byte[] utf8Bytes = Convert.FromBase64String(payloadValue);
+                jobject["payload"] = System.Text.Encoding.UTF8.GetString(utf8Bytes);
+            }
+            catch (Exception ex)
+            {
+                if (Console.IsOutputRedirected) Console.Error.WriteLine(ex.Message);
+            }
         }
 
         private static void SeekUntil(Stream s, int direction, char lookFor)
