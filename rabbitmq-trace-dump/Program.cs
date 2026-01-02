@@ -28,7 +28,7 @@ namespace rabbitmq_trace_dump
             {
                 if (ValidateOptions(options, out runsettings) == false) return;
 
-                if (options.Interactive.GetValueOrDefault() && string.IsNullOrEmpty(options.InputFile))
+                if (options.Interactive && string.IsNullOrEmpty(options.InputFile))
                 {
                     SelectFile(runsettings);
                     if (string.IsNullOrEmpty(runsettings.InputFile)) return;
@@ -73,8 +73,8 @@ namespace rabbitmq_trace_dump
             }
 
             //transfer from options
-            runsettings.Interactive = options.Interactive.GetValueOrDefault();
-            runsettings.Pretty = options.Pretty.GetValueOrDefault();
+            runsettings.Interactive = options.Interactive;
+            runsettings.Pretty = options.Pretty;
             runsettings.HiddenProperties = options.HiddenProperties ?? Enumerable.Empty<string>();
 
             //check for NO_COLOR=1 environment variable to disable colors
