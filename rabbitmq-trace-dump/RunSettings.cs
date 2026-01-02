@@ -33,5 +33,6 @@ namespace rabbitmq_trace_dump
         public SearchOperator SearchOp { get; set; }
         public bool NoColor { get; internal set; }
         public PayloadDecoderTypes PayloadDecoder { get; set; } = PayloadDecoderTypes.none;
+        public bool Follow { get; set; } = false;
     }
 }

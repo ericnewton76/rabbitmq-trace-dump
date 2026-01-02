@@ -57,6 +57,23 @@ namespace rabbitmq_trace_dump
 
                     if (sr.EndOfStream || currentLine == null)
                     {
+                        if (Runsettings.Follow)
+                        {
+                            // Wait for new data to be written to the file
+                            while (true)
+                            {
+                                System.Threading.Thread.Sleep(100);
+                                long currentLength = fs.Length;
+                                if (currentLength > fs.Position)
+                                {
+                                    // New data available, continue reading
+                                    break;
+                                }
+                                if (Console.KeyAvailable)
+                                {
+                                    var key = Console.ReadKey(intercept: true);
+                                    if (key.Key == ConsoleKey.Q || key.Key == ConsoleKey.Escape)
+                                    {
                         if (Runsettings.Interactive)
                         {
                             Console.WriteLine("EOF");

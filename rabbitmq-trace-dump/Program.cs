@@ -102,6 +102,7 @@ namespace rabbitmq_trace_dump
             }
 
             runsettings.PayloadDecoder = options.PayloadDecoder;
+            runsettings.Follow = options.Follow;
 
             return true;
         }

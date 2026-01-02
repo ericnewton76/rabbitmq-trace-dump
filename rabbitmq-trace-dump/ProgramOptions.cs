@@ -38,6 +38,9 @@ namespace rabbitmq_trace_dump
 
         [Option('d', "payload-decoder", HelpText = "Specifies the payload decoder to use. Supported values are: none, bson, json, utf8")]
         public PayloadDecoderTypes PayloadDecoder { get; set; } = PayloadDecoderTypes.none;
+
+        [Option('f', "follow", HelpText = "Follow the file for new records (like tail -f)")]
+        public bool Follow { get; set; } = false;
     }
 
     public enum PayloadDecoderTypes
